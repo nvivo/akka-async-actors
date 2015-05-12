@@ -1,10 +1,5 @@
 ﻿using Akka.Actor;
 using Akka.Event;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace Akka.Contrib.AsyncActors.Samples
@@ -17,7 +12,7 @@ namespace Akka.Contrib.AsyncActors.Samples
     public class SampleAsyncUntypedActor : AsyncUntypedActor
     {
         private int? _state;
-        LoggingAdapter Log = Context.GetLogger();
+        ILoggingAdapter Log = Context.GetLogger();
 
         protected override async Task OnReceiveAsync(object request)
         {

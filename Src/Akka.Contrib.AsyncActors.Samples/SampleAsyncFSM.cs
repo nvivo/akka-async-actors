@@ -1,9 +1,5 @@
 ﻿using Akka.Actor;
 using Akka.Event;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Akka.Contrib.AsyncActors.Samples
@@ -19,19 +15,13 @@ namespace Akka.Contrib.AsyncActors.Samples
     /// multiple methods that returns tasks and async/await is just
     /// simpler than breaking into multiple messages.
     /// </summary>
-    public class SampleAsyncFSM : AsyncFSM<int, object>
+    public class SampleAsyncFSM : AsyncFSM<int, object>, IWithUnboundedStash
     {
         const int IDLE = 0;
         const int PROCESSING = 1;
-        
-        LoggingAdapter Log = Context.GetLogger();
-        int _state = 0;
 
-        class ProcessingResult
-        {
-            public int Request;
-            public int State;
-        }
+        ILoggingAdapter Log = Context.GetLogger();
+        public IStash Stash { get; set; }
 
         public SampleAsyncFSM()
         {
@@ -41,8 +31,15 @@ namespace Akka.Contrib.AsyncActors.Samples
             {
                 if (e.FsmEvent is int)
                 {
-                    Log.Info("Incoming  " + e.FsmEvent);
-                    DoSomeBackgroundWork((int)e.FsmEvent);
+                    var i = (int)e.FsmEvent;
+                    
+                    Log.Info("Received:" + i);
+                    var self = Self;
+
+                    Self.Tell(new ProcessingResult(i));
+                    Self.Tell(new ProcessingResult(i));
+                    Self.Tell(new ProcessingResult(i, true));
+
                     return GoTo(PROCESSING);
                 }
                 
@@ -51,16 +48,22 @@ namespace Akka.Contrib.AsyncActors.Samples
 
             WhenAsync(PROCESSING, async e =>
             {
-                if (e.FsmEvent is ProcessingResult)
+                var result = e.FsmEvent as ProcessingResult;
+
+                if (result != null)
                 {
-                    var result = (ProcessingResult)e.FsmEvent;
+                    Log.Info("Processed: {0}, {1}", result.Value, result.IsLastValue ? "continuing synchronously" : "awaiting...");
 
-                    await ProcessResult(result.State);
-
-                    Log.Info("Processed {0}, State {1}", result.Request, result.State);
-
-                    Stash.UnstashAll();
-                    return GoTo(IDLE);
+                    if (!result.IsLastValue)
+                    {
+                        await Task.Delay(100);
+                        return Stay();
+                    }
+                    else
+                    {
+                        Stash.UnstashAll();
+                        return GoTo(IDLE);
+                    }
                 }
 
                 Stash.Stash();
@@ -68,30 +71,16 @@ namespace Akka.Contrib.AsyncActors.Samples
             });
         }
 
-        private void DoSomeBackgroundWork(int request)
+        class ProcessingResult
         {
-            _state = _state + 2;
-
-            // here we are sure a background task will be started, 
-            // we send a message to ourselves with the result once its finished
-            Task.Delay(50)
-                .ContinueWith(_ => {
-                    
-                    return new ProcessingResult { Request = request, State = _state };
-                }).PipeTo(Self);
-        }
-
-        private async Task ProcessResult(int result)
-        {
-            // here, only in some cases this will cause a task
-            // to start, most cases will return immediately
-            // instead of creating an immaginary message, we use
-            // async/await and let it run syncrhonously if needed
-            if (result % 5 == 0)
+            public ProcessingResult(int value, bool isLastValue = false)
             {
-                Log.Info("Need some external work on this one, awaiting...");
-                await Task.Delay(10);
+                Value = value;
+                IsLastValue = isLastValue;
             }
+
+            public int Value;
+            public bool IsLastValue;
         }
     }
 }

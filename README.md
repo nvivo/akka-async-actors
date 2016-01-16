@@ -1,3 +1,9 @@
+## DEPRECATION NOTICE
+
+I removed this library from nuget.org. Although the issues this package addresses are still present as of Akka.NET 1.0.5 and it will in most cases improve performance within actors, Akka.NET supports task with ReceiveActors to some degree. And although it has some unecessary overhead, this overhead can only be noticed in benchmarks and most people even with high usage are not even close to the numbers required to make this a real problem. 
+
+This library was created as a way to show the problem could be addressed by other means, but Akka.NET prefers to keep the API  compatible with the JVM implementation than having a better API for .NET. This was a good experiment, but I won't be supporting this code anymore.
+
 # Akka.Contrib.AsyncActors
 
 This project provides 3 actors with better support for async/await for Akka.NET:
@@ -9,14 +15,6 @@ This project provides 3 actors with better support for async/await for Akka.NET:
 > Note: This new version doesn't require stashing anymore.
 
 For information on why this package is required or why it should be preferred over the official akka support for async/await, [see my reasons below](#reasons).
-
-## Installation
-
-Install from [Nuget](https://www.nuget.org/packages/Akka.Contrib.AsyncActors/):
-
-```
-Install-Package Akka.Contrib.AsyncActors
-```
 
 ## Usage
 
